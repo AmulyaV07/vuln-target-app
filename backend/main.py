@@ -1,5 +1,6 @@
 import os
 import uuid
+import omium
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,9 @@ ROOT_DIR = BACKEND_DIR.parent
 # Supports .env at project root and/or backend/.env (backend wins on duplicate keys)
 load_dotenv(ROOT_DIR / ".env")
 load_dotenv(BACKEND_DIR / ".env", override=True)
+
+# Initialize Omium AI tracing
+omium.init()
 
 app = FastAPI(title="Project Zero-Day")
 
