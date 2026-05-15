@@ -5,22 +5,22 @@ import sqlite3
 
 from flask import Flask, jsonify, render_template_string, request
 
-from database import DB_PATH, fetch_all_users, init_db
+from database import DB_PATH, fetch_all_staff, init_db
 
 app = Flask(__name__)
 
 HOME_HTML = """
 <!DOCTYPE html>
 <html>
-<head><title>Zero-Day Arena</title></head>
-<body style="font-family: monospace; background: #111; color: #0f0; padding: 2rem;">
-  <h1>ZERO-DAY ARENA — LOGIN</h1>
+<head><title>Random Login Page</title></head>
+<body style="font-family: sans-serif; background: #eee; color: #333; padding: 2rem;">
+  <h1>Company Portal Login</h1>
   <form id="loginForm">
-    <label>USERNAME</label><br>
+    <label>Alias:</label><br>
     <input type="text" name="username" id="username" style="width: 300px;"><br><br>
-    <label>PASSWORD</label><br>
+    <label>Passcode:</label><br>
     <input type="password" name="password" id="password" style="width: 300px;"><br><br>
-    <button type="submit">LOGIN</button>
+    <button type="submit">Access System</button>
   </form>
   <pre id="result" style="margin-top: 1rem;"></pre>
   <script>
@@ -52,44 +52,40 @@ def health():
 
 
 @app.route("/login", methods=["POST"])
-def login():
-    data = request.get_json(silent=True) or {}
-    username = data.get("username", "")
-    password = data.get("password", "")
+def auth_employee():
+    payload = request.get_json(silent=True) or {}
+    # Extracting inputs
+    user_alias = payload.get("username", "")
+    secret_key = payload.get("password", "")
 
-    query = (
-        "SELECT * FROM users WHERE username='"
-        + username
-        + "' AND password='"
-        + password
-        + "'"
-    )
+    # Completely different coding style, using f-strings and new table
+    unsafe_query = f"SELECT * FROM staff_directory WHERE emp_alias = '{user_alias}' AND secret_passcode = '{secret_key}'"
 
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    db_conn = sqlite3.connect(DB_PATH)
+    db_conn.row_factory = sqlite3.Row
+    cursor = db_conn.cursor()
     try:
-        cursor.execute(query)
-        rows = cursor.fetchall()
+        cursor.execute(unsafe_query)
+        fetched_data = cursor.fetchall()
     except sqlite3.Error:
-        conn.close()
+        db_conn.close()
         return jsonify({"status": "fail"})
 
-    conn.close()
+    db_conn.close()
 
-    if not rows:
+    if not fetched_data:
         return jsonify({"status": "fail"})
 
-    if len(rows) > 1:
-        users_dump = [dict(row) for row in rows]
-        return jsonify({"status": "success", "users": users_dump})
+    if len(fetched_data) > 1:
+        staff_dump = [dict(r) for r in fetched_data]
+        return jsonify({"status": "success", "users": staff_dump})
 
-    row = dict(rows[0])
-    if username.strip().lower() != row.get("username", "").lower():
-        users_dump = fetch_all_users()
-        return jsonify({"status": "success", "users": users_dump})
+    record = dict(fetched_data[0])
+    if user_alias.strip().lower() != record.get("emp_alias", "").lower():
+        staff_dump = fetch_all_staff()
+        return jsonify({"status": "success", "users": staff_dump})
 
-    return jsonify({"status": "success", "user": row})
+    return jsonify({"status": "success", "user": record})
 
 
 @app.route("/ping", methods=["POST"])
@@ -98,9 +94,9 @@ def ping():
     host = data.get("host", "")
 
     if platform.system() == "Windows":
-        cmd = "ping -n 1 " + host
+        cmd = f"ping -n 1 {host}"
     else:
-        cmd = "ping -c 1 " + host
+        cmd = f"ping -c 1 {host}"
 
     try:
         with os.popen(cmd) as proc:

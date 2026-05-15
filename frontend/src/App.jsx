@@ -5,6 +5,7 @@ import AttackPanel from "./components/AttackPanel";
 import BreachAlert from "./components/BreachAlert";
 import JournalView from "./components/JournalView";
 import StatusBar from "./components/StatusBar";
+import RemediationPanel from "./components/RemediationPanel";
 
 function statusToLabel(status) {
   const map = {
@@ -28,6 +29,8 @@ export default function App() {
   const [breachTrigger, setBreachTrigger] = useState(0);
   const [currentAgent, setCurrentAgent] = useState("—");
   const [phase, setPhase] = useState("STANDBY");
+  const [patchCode, setPatchCode] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState(null);
 
   const wsRef = useRef(null);
   const pollRef = useRef(null);
@@ -74,10 +77,21 @@ export default function App() {
         setRawStatus("breached");
         setPhase("BREACH");
       }
+      
+      if (data.message && data.message.startsWith("REMEDIATION_DATA|")) {
+        const parts = data.message.split("|");
+        const isEffective = parts[1] === "True";
+        const code = parts.slice(2).join("|");
+        setVerificationStatus(isEffective);
+        setPatchCode(code);
+        setPhase("REMEDIATION COMPLETE");
+      }
 
       if (data.agent === "ALPHA") setPhase("RECON");
       if (data.agent === "BETA") setPhase("EXPLOIT");
       if (data.agent === "GAMMA") setPhase("ANALYSIS");
+      if (data.agent === "DELTA") setPhase("PATCHING");
+      if (data.agent === "EPSILON") setPhase("VERIFYING");
     } catch (err) {
       console.error("[App] ws parse error:", err);
     }
@@ -135,6 +149,8 @@ export default function App() {
     setScanStatus("SCANNING");
     setRawStatus("running");
     setPhase("RED SWARM ACTIVE");
+    setPatchCode(null);
+    setVerificationStatus(null);
 
     try {
       const res = await fetch(`${API_BASE}/scan`, {
@@ -198,6 +214,12 @@ export default function App() {
         <aside className="panel panel-right">
           <h2 className="panel-title">ATTACK JOURNAL</h2>
           <JournalView entries={journalEntries} />
+          {patchCode && (
+            <RemediationPanel 
+              patchCode={patchCode} 
+              verificationStatus={verificationStatus} 
+            />
+          )}
         </aside>
       </div>
     </div>

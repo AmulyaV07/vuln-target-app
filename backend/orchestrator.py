@@ -5,6 +5,8 @@ from typing import Awaitable, Callable, Literal
 from agents.alpha import run_alpha
 from agents.beta import run_beta
 from agents.gamma import run_gamma
+from agents.delta import run_delta
+from agents.epsilon import run_epsilon
 from journal import AttackJournal, LOGS_DIR
 from tools.file_ops import write_log
 from tools.http_exploit import summarize_response
@@ -80,6 +82,20 @@ async def run_scan(
                 "SYSTEM",
                 "breach",
             )
+            
+            # TRIGGER BLUE SWARM
+            await broadcast_fn("SYSTEM: Activating Blue Swarm for remediation.", "SYSTEM", "info")
+            patch_code = await run_delta(scan_id, target_url, vuln_type, payload, broadcast_fn)
+            
+            if not patch_code.startswith("Failed"):
+                verify_result = await run_epsilon(scan_id, target_url, vuln_type, payload, broadcast_fn)
+                # Send the final remediation status back
+                await broadcast_fn(
+                    f"REMEDIATION_DATA|{verify_result['patch_effective']}|{patch_code}",
+                    "SYSTEM",
+                    "info"
+                )
+
             return "breached"
 
         try:

@@ -1,5 +1,5 @@
-export const API_BASE = "http://localhost:8000";
-export const WS_URL = "ws://localhost:8000/ws";
+export const API_BASE = "http://localhost:8001";
+export const WS_URL = "ws://localhost:8001/ws";
 
 export function vulnTypeToApi(label) {
   if (label === "COMMAND INJECTION") return "cmdi";
