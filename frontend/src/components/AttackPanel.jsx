@@ -1,6 +1,10 @@
 export default function AttackPanel({
   targetUrl,
   setTargetUrl,
+  targetFile,
+  setTargetFile,
+  scanMode,
+  setScanMode,
   vulnLabel,
   setVulnLabel,
   scanStatus,
@@ -15,17 +19,42 @@ export default function AttackPanel({
 
   return (
     <div className="attack-panel">
-      <label className="terminal-label" htmlFor="target-url">
-        TARGET URL
+      <label className="terminal-label" htmlFor="scan-mode">
+        SCAN MODE
       </label>
-      <input
-        id="target-url"
-        className="terminal-input"
-        type="text"
-        value={targetUrl}
-        onChange={(e) => setTargetUrl(e.target.value)}
+      <select
+        id="scan-mode"
+        className="terminal-select"
+        value={scanMode}
+        onChange={(e) => setScanMode(e.target.value)}
         disabled={isScanning}
-      />
+      >
+        <option value="dast">DAST (LIVE URL)</option>
+        <option value="sast">SAST (LOCAL FILE)</option>
+      </select>
+
+      <label className="terminal-label" htmlFor="target-input">
+        {scanMode === "dast" ? "TARGET URL" : "TARGET FILE PATH"}
+      </label>
+      {scanMode === "dast" ? (
+        <input
+          id="target-input"
+          className="terminal-input"
+          type="text"
+          value={targetUrl}
+          onChange={(e) => setTargetUrl(e.target.value)}
+          disabled={isScanning}
+        />
+      ) : (
+        <input
+          id="target-input"
+          className="terminal-input"
+          type="text"
+          value={targetFile}
+          onChange={(e) => setTargetFile(e.target.value)}
+          disabled={isScanning}
+        />
+      )}
 
       <label className="terminal-label" htmlFor="vuln-type">
         VULNERABILITY TYPE

@@ -20,6 +20,8 @@ MAX_RETRIES = 4
 async def run_scan(
     scan_id: str,
     target_url: str,
+    target_file: str,
+    scan_mode: str,
     vuln_type: str,
     broadcast_fn: BroadcastFn,
     journal: AttackJournal,
@@ -27,6 +29,9 @@ async def run_scan(
     journal.reset()
     target_url = target_url.rstrip("/")
     vuln_type = vuln_type.lower().strip()
+
+    if scan_mode == "sast":
+        return await run_sast_scan(scan_id, target_file, vuln_type, broadcast_fn, journal)
 
     await broadcast_fn(
         f"Orchestrator: Red Swarm engaging {target_url} ({vuln_type})",
@@ -128,3 +133,43 @@ async def run_scan(
     write_log(scan_id, journal.get_context_string())
 
     return "failed"
+
+
+async def run_sast_scan(
+    scan_id: str,
+    target_file: str,
+    vuln_type: str,
+    broadcast_fn: BroadcastFn,
+    journal: AttackJournal,
+) -> ScanOutcome:
+    await broadcast_fn(f"Orchestrator: Zeta SAST scanning {target_file} ({vuln_type})", "SYSTEM", "info")
+    
+    if not target_file or not os.path.exists(target_file):
+        await broadcast_fn(f"File not found: {target_file}", "ZETA", "error")
+        return "error"
+        
+    try:
+        from agents.zeta import run_zeta
+        zeta_data = await run_zeta(target_file, vuln_type, broadcast_fn)
+        is_vulnerable = zeta_data.get("is_vulnerable", False)
+        payload = zeta_data.get("vulnerable_code", "")
+    except Exception as exc:
+        await broadcast_fn(f"Zeta failed: {exc}", "ZETA", "error")
+        return "error"
+
+    if is_vulnerable:
+        await broadcast_fn("ZETA FOUND VULNERABILITY — trigger patching", "SYSTEM", "breach")
+        await broadcast_fn("SYSTEM: Activating Blue Swarm for remediation.", "SYSTEM", "info")
+        patch_code = await run_delta(scan_id, target_url="", vuln_type=vuln_type, winning_payload=payload, broadcast_fn=broadcast_fn, target_file_path=target_file)
+        
+        # Skip Epsilon for SAST
+        await broadcast_fn(
+            f"REMEDIATION_DATA|True|{patch_code}",
+            "SYSTEM",
+            "info"
+        )
+        return "breached"
+    else:
+        await broadcast_fn("Zeta found no vulnerabilities in this file.", "SYSTEM", "info")
+        return "failed"
+

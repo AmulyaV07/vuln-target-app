@@ -38,11 +38,14 @@ class AttackJournal:
 
         parts = []
         for entry in self._entries:
+            crit = entry['gamma_critique']
+            if len(crit) > 300:
+                crit = crit[:300] + "...(truncated)"
             parts.append(
                 f"ATTEMPT {entry['attempt_number']}: "
                 f"Payload=`{entry['payload']}`, "
                 f"Response=`{entry['server_response_summary']}`, "
-                f"Critique=`{entry['gamma_critique']}`, "
+                f"Critique=`{crit}`, "
                 f"Outcome={entry['outcome']}."
             )
         return " ".join(parts)

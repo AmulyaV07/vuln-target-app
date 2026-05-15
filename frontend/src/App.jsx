@@ -18,7 +18,9 @@ function statusToLabel(status) {
 }
 
 export default function App() {
-  const [targetUrl, setTargetUrl] = useState("http://localhost:5000");
+  const [targetUrl, setTargetUrl] = useState("http://localhost:5001");
+  const [targetFile, setTargetFile] = useState("C:\\Users\\amuly\\OneDrive\\Desktop\\divayjainki\\target\\app.py");
+  const [scanMode, setScanMode] = useState("dast");
   const [vulnLabel, setVulnLabel] = useState("SQL INJECTION");
   const [messages, setMessages] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
@@ -158,6 +160,8 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           target_url: targetUrl.trim(),
+          target_file: targetFile.trim(),
+          scan_mode: scanMode,
           vuln_type: vulnTypeToApi(vulnLabel),
         }),
       });
@@ -191,6 +195,10 @@ export default function App() {
           <AttackPanel
             targetUrl={targetUrl}
             setTargetUrl={setTargetUrl}
+            targetFile={targetFile}
+            setTargetFile={setTargetFile}
+            scanMode={scanMode}
+            setScanMode={setScanMode}
             vulnLabel={vulnLabel}
             setVulnLabel={setVulnLabel}
             scanStatus={scanStatus}

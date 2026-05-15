@@ -12,6 +12,7 @@ async def run_delta(
     vuln_type: str,
     winning_payload: str,
     broadcast_fn: BroadcastFn,
+    target_file_path: str = None,
 ) -> str:
     await broadcast_fn(
         "Delta: Analyzing target source code to design a patch...",
@@ -20,7 +21,7 @@ async def run_delta(
     )
 
     try:
-        app_path = os.path.join(os.path.dirname(__file__), "..", "..", "target", "app.py")
+        app_path = target_file_path if target_file_path else os.path.join(os.path.dirname(__file__), "..", "..", "target", "app.py")
         with open(app_path, "r", encoding="utf-8") as f:
             source_code = f.read()
     except Exception as exc:
@@ -31,18 +32,17 @@ async def run_delta(
     system_prompt = (
         "You are Delta, an elite security architect. "
         "You have been given the source code of a vulnerable application and the exact payload that breached it. "
-        "Your task is to write a patched version of the specific vulnerable function only. "
-        "For SQLi: replace raw string concatenation with parameterized queries using sqlite3's ? placeholder syntax. "
-        "For CMDi: add input validation that only allows alphanumeric characters and dots for the host. "
-        "CRITICAL: You must also modify the app.run() call at the bottom of the file to use port=5002 instead of 5000. "
-        "Output ONLY the complete patched Python code (the full app.py file content, so it can run standalone). "
+        "Your task is to write a secure, patched version of the code. "
+        "Analyze the provided code and apply the correct security best practices (e.g., parameterized queries for the specific database driver used, or proper input sanitization/escaping for command injection). "
+        "CRITICAL: You must also modify any app.run() call to use port=5002 instead of 5000 if it exists. "
+        "Output ONLY the complete patched Python code (the full file content, so it can run standalone). "
         "Do not use markdown formatting like ```python, do not explain anything, output raw python code ONLY."
     )
 
     user_prompt = (
         f"Vulnerability Type: {vuln_type}\n"
         f"Winning Payload that breached the system: {winning_payload}\n\n"
-        f"--- CURRENT SOURCE CODE (app.py) ---\n{source_code}\n------------------------------------"
+        f"--- CURRENT SOURCE CODE ---\n{source_code}\n------------------------------------"
     )
 
     await broadcast_fn("Delta: Designing and applying patch logic...", "DELTA", "thinking")
