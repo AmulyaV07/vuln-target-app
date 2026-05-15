@@ -59,16 +59,18 @@ class ScanRequest(BaseModel):
 async def _execute_scan(scan_id: str, target_url: str, vuln_type: str) -> None:
     scan_state["status"] = "running"
     scan_state["scan_id"] = scan_id
-    journal.reset()
 
     try:
-        await run_scan(target_url, vuln_type, send_update, journal)
+        outcome = await run_scan(scan_id, target_url, vuln_type, send_update, journal)
+        if outcome == "breached":
+            scan_state["status"] = "breached"
+        elif outcome == "failed":
+            scan_state["status"] = "failed"
+        elif scan_state["status"] == "running":
+            scan_state["status"] = "idle"
     except Exception as exc:
         await send_update(f"Scan failed: {exc}", "SYSTEM", "error")
         scan_state["status"] = "failed"
-    else:
-        if scan_state["status"] == "running":
-            scan_state["status"] = "idle"
 
 
 def _start_scan(background_tasks: BackgroundTasks, target_url: str, vuln_type: str) -> dict:
