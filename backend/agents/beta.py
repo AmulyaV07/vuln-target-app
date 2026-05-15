@@ -69,7 +69,9 @@ async def run_beta(
     broadcast_fn: BroadcastFn,
     attempt: int = 1,
 ) -> dict[str, Any]:
-    intel = "\n".join(alpha_results[:15]) if alpha_results else "No recon results."
+    intel = "\n".join(alpha_results[:5]) if alpha_results else "No recon results."
+    if len(intel) > 1000:
+        intel = intel[:1000] + "...(truncated)"
     surface = get_attack_surface(vuln_type, target_url)
     seed = get_seed_payload(vuln_type, attempt)
 

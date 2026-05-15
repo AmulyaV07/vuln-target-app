@@ -57,15 +57,17 @@ async def send_update(message: str, agent: str, level: str) -> None:
 
 class ScanRequest(BaseModel):
     target_url: str
+    target_file: str = ""
+    scan_mode: str = "dast"
     vuln_type: str = "sqli"
 
 
-async def _execute_scan(scan_id: str, target_url: str, vuln_type: str) -> None:
+async def _execute_scan(scan_id: str, target_url: str, target_file: str, scan_mode: str, vuln_type: str) -> None:
     scan_state["status"] = "running"
     scan_state["scan_id"] = scan_id
 
     try:
-        outcome = await run_scan(scan_id, target_url, vuln_type, send_update, journal)
+        outcome = await run_scan(scan_id, target_url, target_file, scan_mode, vuln_type, send_update, journal)
         if outcome == "breached":
             scan_state["status"] = "breached"
         elif outcome == "failed":
@@ -77,13 +79,13 @@ async def _execute_scan(scan_id: str, target_url: str, vuln_type: str) -> None:
         scan_state["status"] = "failed"
 
 
-def _start_scan(background_tasks: BackgroundTasks, target_url: str, vuln_type: str) -> dict:
+def _start_scan(background_tasks: BackgroundTasks, target_url: str, target_file: str, scan_mode: str, vuln_type: str) -> dict:
     if scan_state["status"] == "running":
         return {"status": "already_running", "scan_id": scan_state["scan_id"]}
 
     scan_id = str(uuid.uuid4())
     scan_state["scan_id"] = scan_id
-    background_tasks.add_task(_execute_scan, scan_id, target_url, vuln_type)
+    background_tasks.add_task(_execute_scan, scan_id, target_url, target_file, scan_mode, vuln_type)
     return {"status": "started", "scan_id": scan_id}
 
 
@@ -99,7 +101,7 @@ async def get_journal():
 
 @app.post("/scan")
 async def start_scan(body: ScanRequest, background_tasks: BackgroundTasks):
-    return _start_scan(background_tasks, body.target_url, body.vuln_type)
+    return _start_scan(background_tasks, body.target_url, body.target_file, body.scan_mode, body.vuln_type)
 
 
 @app.post("/webhook/github")
@@ -121,7 +123,7 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
         "info",
     )
 
-    result = _start_scan(background_tasks, target_url, vuln_type)
+    result = _start_scan(background_tasks, target_url, "", "dast", vuln_type)
     return {"status": "accepted", **result}
 
 
